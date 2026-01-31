@@ -21,6 +21,52 @@ function getDocumentState(uri: string): CollapseState {
 }
 
 /**
+ * Core collapse logic without UI notifications (used internally)
+ */
+async function collapseAllErrorBlocksSilent(editor: vscode.TextEditor): Promise<number> {
+    const document = editor.document;
+    
+    if (document.languageId !== 'go') {
+        return 0;
+    }
+    
+    const detector = getDetector();
+    const errorBlocks = detector.detectErrorBlocks(document);
+    
+    if (errorBlocks.length === 0) {
+        return 0;
+    }
+    
+    // Save current selection and viewport position to restore later
+    const originalSelection = editor.selection;
+    const visibleRange = editor.visibleRanges[0];
+    
+    // Fold all error blocks
+    for (const block of errorBlocks) {
+        await vscode.commands.executeCommand('editor.fold', {
+            levels: 1,
+            direction: 'down',
+            selectionLines: [block.startLine]
+        });
+    }
+    
+    // Restore original selection and viewport position
+    editor.selection = originalSelection;
+    if (visibleRange) {
+        editor.revealRange(visibleRange, vscode.TextEditorRevealType.AtTop);
+    }
+    
+    // Update state
+    const state = getDocumentState(document.uri.toString());
+    state.isCollapsed = true;
+    
+    // Apply collapsed hints if enabled
+    getDecorationManager().applyCollapsedHints(editor, errorBlocks);
+    
+    return errorBlocks.length;
+}
+
+/**
  * Collapse all error blocks in the active editor
  */
 async function collapseAllErrorBlocks(editor: vscode.TextEditor): Promise<void> {
@@ -31,66 +77,46 @@ async function collapseAllErrorBlocks(editor: vscode.TextEditor): Promise<void> 
         return;
     }
     
-    const detector = getDetector();
-    const errorBlocks = detector.detectErrorBlocks(document);
-    
-    if (errorBlocks.length === 0) {
-        vscode.window.showInformationMessage('Go Error Collapse: No error blocks found');
-        return;
-    }
-    
-    // Disable fold highlighting for cleaner appearance
+    // Disable fold highlighting for cleaner appearance (one-time setup)
     const editorConfig = vscode.workspace.getConfiguration('editor');
     if (editorConfig.get('foldingHighlight') !== false) {
         await editorConfig.update('foldingHighlight', false, vscode.ConfigurationTarget.Global);
     }
     
-    // Collect all start lines for folding
-    const selectionLines = errorBlocks.map(block => block.startLine);
+    const count = await collapseAllErrorBlocksSilent(editor);
     
-    // Execute fold command for all lines at once
-    for (const startLine of selectionLines) {
-        const position = new vscode.Position(startLine, 0);
-        editor.selection = new vscode.Selection(position, position);
-        
-        await vscode.commands.executeCommand('editor.fold', {
-            levels: 1,
-            direction: 'down',
-            selectionLines: [startLine]
-        });
+    if (count === 0) {
+        vscode.window.showInformationMessage('Go Error Collapse: No error blocks found');
+    } else {
+        vscode.window.showInformationMessage(
+            `Go Error Collapse: Collapsed ${count} error block(s)`
+        );
     }
-    
-    // Update state
-    const state = getDocumentState(document.uri.toString());
-    state.isCollapsed = true;
-    
-    // Apply collapsed hints if enabled
-    const decorationManager = getDecorationManager();
-    decorationManager.applyCollapsedHints(editor, errorBlocks);
-    
-    vscode.window.showInformationMessage(
-        `Go Error Collapse: Collapsed ${errorBlocks.length} error block(s)`
-    );
 }
 
 /**
- * Expand all error blocks in the active editor
+ * Core expand logic without UI notifications (used internally)
  */
-async function expandAllErrorBlocks(editor: vscode.TextEditor): Promise<void> {
+async function expandAllErrorBlocksSilent(editor: vscode.TextEditor): Promise<number> {
     const document = editor.document;
     
     if (document.languageId !== 'go') {
-        return;
+        return 0;
     }
     
     const detector = getDetector();
     const errorBlocks = detector.detectErrorBlocks(document);
     
-    // Unfold each error block
+    if (errorBlocks.length === 0) {
+        return 0;
+    }
+    
+    // Save current selection and viewport position to restore later
+    const originalSelection = editor.selection;
+    const visibleRange = editor.visibleRanges[0];
+    
+    // Unfold all error blocks
     for (const block of errorBlocks) {
-        const position = new vscode.Position(block.startLine, 0);
-        editor.selection = new vscode.Selection(position, position);
-        
         await vscode.commands.executeCommand('editor.unfold', {
             levels: 1,
             direction: 'down',
@@ -98,27 +124,66 @@ async function expandAllErrorBlocks(editor: vscode.TextEditor): Promise<void> {
         });
     }
     
+    // Restore original selection and viewport position
+    editor.selection = originalSelection;
+    if (visibleRange) {
+        editor.revealRange(visibleRange, vscode.TextEditorRevealType.AtTop);
+    }
+    
     // Update state
     const state = getDocumentState(document.uri.toString());
     state.isCollapsed = false;
     
     // Clear hints
-    const decorationManager = getDecorationManager();
-    decorationManager.clearHints(document.uri.toString());
+    getDecorationManager().clearHints(document.uri.toString());
     
-    vscode.window.showInformationMessage('Go Error Collapse: Expanded all error blocks');
+    return errorBlocks.length;
 }
 
 /**
- * Toggle collapse state for error blocks
+ * Expand all error blocks in the active editor
+ */
+async function expandAllErrorBlocks(editor: vscode.TextEditor): Promise<void> {
+    if (editor.document.languageId !== 'go') {
+        return;
+    }
+    
+    const count = await expandAllErrorBlocksSilent(editor);
+    
+    if (count > 0) {
+        vscode.window.showInformationMessage('Go Error Collapse: Expanded all error blocks');
+    }
+}
+
+/**
+ * Toggle collapse state for error blocks (silent toggle, show result)
  */
 async function toggleErrorBlocks(editor: vscode.TextEditor): Promise<void> {
+    if (editor.document.languageId !== 'go') {
+        vscode.window.showInformationMessage('Go Error Collapse: Not a Go file');
+        return;
+    }
+    
     const state = getDocumentState(editor.document.uri.toString());
     
     if (state.isCollapsed) {
-        await expandAllErrorBlocks(editor);
+        const count = await expandAllErrorBlocksSilent(editor);
+        if (count > 0) {
+            vscode.window.showInformationMessage(`Go Error Collapse: Expanded ${count} error block(s)`);
+        }
     } else {
-        await collapseAllErrorBlocks(editor);
+        // Ensure fold highlighting is disabled
+        const editorConfig = vscode.workspace.getConfiguration('editor');
+        if (editorConfig.get('foldingHighlight') !== false) {
+            await editorConfig.update('foldingHighlight', false, vscode.ConfigurationTarget.Global);
+        }
+        
+        const count = await collapseAllErrorBlocksSilent(editor);
+        if (count === 0) {
+            vscode.window.showInformationMessage('Go Error Collapse: No error blocks found');
+        } else {
+            vscode.window.showInformationMessage(`Go Error Collapse: Collapsed ${count} error block(s)`);
+        }
     }
 }
 
@@ -167,7 +232,7 @@ async function autoCollapseOnOpen(editor: vscode.TextEditor): Promise<void> {
 }
 
 /**
- * Re-collapse error blocks after save
+ * Re-collapse error blocks after save (runs after go fmt completes)
  */
 async function autoCollapseOnSave(document: vscode.TextDocument): Promise<void> {
     if (!ConfigManager.autoCollapseOnSave) {
@@ -185,15 +250,15 @@ async function autoCollapseOnSave(document: vscode.TextDocument): Promise<void> 
     
     const state = getDocumentState(document.uri.toString());
     
-    // Only re-collapse if blocks were previously collapsed
+    // Invalidate cache since document changed (go fmt may have reformatted)
+    getDetector().invalidateCache(document);
+    
+    // Delay to ensure go fmt has completed (go fmt runs on save)
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Re-collapse if blocks were previously collapsed
     if (state.isCollapsed) {
-        // Invalidate cache since document changed
-        getDetector().invalidateCache(document);
-        
-        // Small delay after save
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        await collapseAllErrorBlocks(editor);
+        await collapseAllErrorBlocksSilent(editor);
     }
     
     // Re-apply transparency if active
@@ -282,7 +347,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     
     // Register event listeners
-    const onDidOpenTextDocument = vscode.window.onDidChangeActiveTextEditor(editor => {
+    const onActiveEditorChange = vscode.window.onDidChangeActiveTextEditor(editor => {
         if (editor) {
             autoCollapseOnOpen(editor);
         }
@@ -309,7 +374,7 @@ export function activate(context: vscode.ExtensionContext): void {
         toggleCommand,
         makeTransparentCommand,
         resetTransparencyCommand,
-        onDidOpenTextDocument,
+        onActiveEditorChange,
         onDidSaveTextDocument,
         onConfigChange,
         onDidCloseTextDocument
