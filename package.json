@@ -1,0 +1,113 @@
+{
+  "name": "go-error-collapse",
+  "displayName": "Go Error Collapse",
+  "description": "Collapse Go error handling blocks for better readability",
+  "version": "1.0.0",
+  "publisher": "go-error-collapse",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "go",
+    "golang",
+    "error",
+    "readability",
+    "folding"
+  ],
+  "activationEvents": [
+    "onLanguage:go"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "goErrorCollapse.collapseAll",
+        "title": "Collapse All Error Blocks",
+        "category": "Go Error Collapse"
+      },
+      {
+        "command": "goErrorCollapse.expandAll",
+        "title": "Expand All Error Blocks",
+        "category": "Go Error Collapse"
+      },
+      {
+        "command": "goErrorCollapse.toggle",
+        "title": "Toggle Error Block Collapse",
+        "category": "Go Error Collapse"
+      },
+      {
+        "command": "goErrorCollapse.makeTransparent",
+        "title": "Make Error Blocks Transparent",
+        "category": "Go Error Collapse"
+      },
+      {
+        "command": "goErrorCollapse.resetTransparency",
+        "title": "Reset Error Block Transparency",
+        "category": "Go Error Collapse"
+      }
+    ],
+    "configuration": {
+      "title": "Go Error Collapse",
+      "properties": {
+        "goErrorCollapse.autoCollapseOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically collapse error blocks when opening Go files"
+        },
+        "goErrorCollapse.autoCollapseOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Re-collapse error blocks after saving"
+        },
+        "goErrorCollapse.errorOpacity": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Opacity for transparent error blocks"
+        },
+        "goErrorCollapse.showCollapsedHint": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show one-liner hint when collapsed"
+        },
+        "goErrorCollapse.errorPatterns": {
+          "type": "array",
+          "default": [
+            "err",
+            "error"
+          ],
+          "description": "Variable names to recognize as error types"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "goErrorCollapse.toggle",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorLangId == go"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "^18.x",
+    "typescript": "^5.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0"
+  }
+}
