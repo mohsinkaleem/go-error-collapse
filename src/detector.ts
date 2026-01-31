@@ -243,27 +243,6 @@ export class ErrorBlockDetector {
     }
     
     /**
-     * Check if multiple lines form a single statement
-     */
-    private isMultiLineStatement(lines: string[]): boolean {
-        // Multi-line statements typically have unclosed parens/brackets
-        let parenCount = 0;
-        let firstLineHasReturn = false;
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (i === 0 && /^\s*return\b/.test(line)) {
-                firstLineHasReturn = true;
-            }
-            parenCount += (line.match(/\(/g) || []).length;
-            parenCount -= (line.match(/\)/g) || []).length;
-        }
-        
-        // If first line has return and parens balance, it's a multi-line statement
-        return firstLineHasReturn && parenCount === 0;
-    }
-    
-    /**
      * Extract the body statement for display
      */
     private extractBodyStatement(bodyLines: string[]): string {

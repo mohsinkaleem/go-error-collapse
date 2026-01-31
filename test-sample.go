@@ -47,3 +47,87 @@ func someOperation(data []byte) (string, error) {
 	}
 	return string(data), nil
 }
+
+func someOperation2(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("operation failed: empty input")
+	}
+
+	ss, err := someOperation(data)
+	if err != nil {
+		return "", err
+	}
+	return string(ss), nil
+}
+
+func someOperation3(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("operation failed: empty input")
+	}
+
+	ss, err := someOperation(data)
+	if err != nil {
+		return "", err
+	}
+	return string(ss), nil
+}
+
+func someOperation3(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("operation failed: empty input")
+	}
+
+	ss, err := someOperation(data)
+	if err != nil {
+		return "", err
+	}
+	return string(ss), nil
+}
+
+func someOperation3(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("operation failed: empty input")
+	}
+
+	ss, err := someOperation(data)
+	if err != nil {
+		return "", err
+	}
+	return string(ss), nil
+}
+
+func someOperation3(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("operation failed: empty input")
+	}
+
+	ss, err := someOperation(data)
+	if err != nil {
+		return "", err
+	}
+	return string(ss), nil
+}
+
+func someOperation3(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("operation failed: empty input")
+	}
+
+	ss, err := someOperation(data)
+	if err != nil {
+		return "", err
+	}
+	return string(ss), nil
+}
+
+func someOperation3(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("operation failed: empty input")
+	}
+
+	ss, err := someOperation(data)
+	if err != nil {
+		return "", err
+	}
+	return string(ss), nil
+}
