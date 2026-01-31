@@ -24,9 +24,9 @@ export class GoErrorFoldingProvider implements vscode.FoldingRangeProvider {
         const errorBlocks = detector.detectErrorBlocks(document);
         
         // Convert error blocks to folding ranges
+        // The fold will hide lines from startLine+1 to endLine (body + closing brace)
+        // This leaves just "if err != nil {" visible with the fold indicator
         const foldingRanges: vscode.FoldingRange[] = errorBlocks.map(block => {
-            // Folding range from the if line to the line before closing brace
-            // This will fold the body, leaving the if line visible
             return new vscode.FoldingRange(
                 block.startLine,
                 block.endLine,

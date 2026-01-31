@@ -39,17 +39,20 @@ async function collapseAllErrorBlocks(editor: vscode.TextEditor): Promise<void> 
         return;
     }
     
+    // Disable fold highlighting for cleaner appearance
+    const editorConfig = vscode.workspace.getConfiguration('editor');
+    if (editorConfig.get('foldingHighlight') !== false) {
+        await editorConfig.update('foldingHighlight', false, vscode.ConfigurationTarget.Global);
+    }
+    
     // Collect all start lines for folding
     const selectionLines = errorBlocks.map(block => block.startLine);
     
     // Execute fold command for all lines at once
-    // We need to position the cursor and fold each region
     for (const startLine of selectionLines) {
-        // Move cursor to the line
         const position = new vscode.Position(startLine, 0);
         editor.selection = new vscode.Selection(position, position);
         
-        // Fold at cursor position
         await vscode.commands.executeCommand('editor.fold', {
             levels: 1,
             direction: 'down',

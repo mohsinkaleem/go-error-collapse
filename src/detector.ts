@@ -183,7 +183,8 @@ export class ErrorBlockDetector {
     }
     
     /**
-     * Check if the body is a simple error return (single statement)
+     * Check if the body is a simple error handling block
+     * Allows: single statements, or print/log + return combinations
      */
     private isSimpleErrorReturn(bodyLines: string[]): boolean {
         // Filter out empty lines and comment-only lines
@@ -192,49 +193,53 @@ export class ErrorBlockDetector {
             return trimmed.length > 0 && !trimmed.startsWith('//');
         });
         
-        // Should be exactly 1 statement (may span multiple lines)
+        // Must have at least one statement
         if (nonEmpty.length === 0) {
+            return false;
+        }
+        
+        // Allow blocks with up to 3 non-empty lines (typical: log/print + return)
+        if (nonEmpty.length > 3) {
             return false;
         }
         
         // Join lines to handle multi-line statements
         const fullBody = nonEmpty.join(' ').trim();
         
-        // Check for simple patterns:
-        // - return err
-        // - return nil, err
-        // - return errors.Wrap(...)
-        // - return fmt.Errorf(...)
-        // - log.Fatal(err)
-        // - log.Fatalf(...)
-        // - panic(err)
-        const simplePatterns = [
-            /^return\s+[\w,\s]*\w*(err|error)\w*$/i,  // return err, return nil, err
-            /^return\s+(nil,\s*)*\w*(err|error)\w*$/i, // return nil, nil, err
-            /^return\s+(errors\.|fmt\.Errorf|fmt\.Error)/i, // return errors.Wrap, fmt.Errorf
-            /^return\s+\w+\.\w+\(/i, // return pkg.Function(...)
-            /^return\s+/i, // any simple return
-            /^log\.(Fatal|Panic|Error|Warn|Info)/i, // log.Fatal, log.Panic
-            /^panic\s*\(/i, // panic(err)
+        // Check each line for valid error handling patterns
+        const validLinePatterns = [
+            /^return\b/i,                              // return statements
+            /^log\.(Fatal|Panic|Error|Warn|Info|Print)/i,  // log.Fatal, log.Panic, log.Printf, etc.
+            /^fmt\.(Print|Errorf|Fprint|Sprint)/i,     // fmt.Printf, fmt.Errorf, etc.
+            /^panic\s*\(/i,                            // panic(err)
+            /^\w+\.(Fatal|Error|Warn|Info|Debug|Print)/i, // custom logger calls
+            /^(os\.Exit|syscall\.Exit)/i,             // exit calls
         ];
         
-        // Check if matches any simple pattern
-        for (const pattern of simplePatterns) {
-            if (pattern.test(fullBody)) {
-                // Additional check: reject if there are multiple statements
-                // Count semicolons or multiple returns
-                if ((fullBody.match(/return/gi) || []).length > 1) {
-                    return false;
+        // Check if each non-empty line matches a valid pattern
+        for (const line of nonEmpty) {
+            const trimmed = line.trim();
+            let isValid = false;
+            
+            for (const pattern of validLinePatterns) {
+                if (pattern.test(trimmed)) {
+                    isValid = true;
+                    break;
                 }
-                // Check for multiple statements (function calls before return)
-                if (nonEmpty.length > 1 && !this.isMultiLineStatement(nonEmpty)) {
-                    return false;
-                }
-                return true;
+            }
+            
+            if (!isValid) {
+                return false;
             }
         }
         
-        return false;
+        // Ensure there's at most one return statement
+        const returnCount = nonEmpty.filter(l => /^\s*return\b/.test(l)).length;
+        if (returnCount > 1) {
+            return false;
+        }
+        
+        return true;
     }
     
     /**

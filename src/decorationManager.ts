@@ -73,23 +73,23 @@ export class DecorationManager {
         // Clear existing hints
         this.clearHints(uri);
         
-        // Create decoration for each block
+        // Create decoration for each block - subtle/dimmed to blend in
         for (const block of blocks) {
             const hintDecoration = vscode.window.createTextEditorDecorationType({
                 after: {
-                    contentText: ` → ${block.bodyStatement}`,
-                    color: new vscode.ThemeColor('editorCodeLens.foreground'),
-                    fontStyle: 'italic',
-                    margin: '0 0 0 1em'
-                }
+                    contentText: ` ${block.bodyStatement}`,
+                    color: new vscode.ThemeColor('editorLineNumber.foreground'),
+                },
+                isWholeLine: false,
             });
             
-            // Apply to the start line (which remains visible after fold)
+            // Position after the opening brace - use zero-width range
+            const ifLine = document.lineAt(block.startLine);
+            const braceIndex = ifLine.text.lastIndexOf('{');
+            
             const range = new vscode.Range(
-                block.startLine, 
-                document.lineAt(block.startLine).text.length,
-                block.startLine,
-                document.lineAt(block.startLine).text.length
+                block.startLine, braceIndex + 1,
+                block.startLine, braceIndex + 1
             );
             
             editor.setDecorations(hintDecoration, [range]);

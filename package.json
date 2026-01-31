@@ -3,7 +3,11 @@
   "displayName": "Go Error Collapse",
   "description": "Collapse Go error handling blocks for better readability",
   "version": "1.0.0",
-  "publisher": "go-error-collapse",
+  "publisher": "mohsinkaleem",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mohsinkaleem/go-error-collapse.git"
+  },
   "engines": {
     "vscode": "^1.74.0"
   },
